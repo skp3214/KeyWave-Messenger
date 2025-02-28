@@ -200,4 +200,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const checkUser = asyncHandler(async(req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select("-password -refreshToken");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.json({ user });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, checkUser };
