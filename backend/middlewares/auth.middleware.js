@@ -10,22 +10,33 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
             req.header("Authorization")?.replace("Bearer ", "");
 
         if (!token) {
-            throw new ApiError(401, "Unauthorized request");
+            throw new ApiError(401, "Unauthorized request: No token provided");
         }
 
-        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        } catch (err) {
+            console.error("JWT Verification Error:", err.message);
+            throw new ApiError(401, "Invalid or expired access token");
+        }
 
-        const user = await User.findById(decodedToken?._id).select(
+        if (!decodedToken?._id) {
+            throw new ApiError(401, "Invalid token: No user ID");
+        }
+
+        const user = await User.findById(decodedToken._id).select(
             "-password -refreshToken"
         );
 
         if (!user) {
-            throw new ApiError(401, "Invalid access token");
+            throw new ApiError(401, "Invalid access token: User not found");
         }
 
         req.user = user;
         next();
     } catch (error) {
-        throw new ApiError(401, error?.message || "Invalid access token");
+        console.error("Auth Middleware Error:", error.message);
+        throw new ApiError(401, error.message || "Unauthorized request");
     }
 });
